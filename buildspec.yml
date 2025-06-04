@@ -3,16 +3,27 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      # Docker Hub authentication
+      - echo Logging in to Docker Hub...
+      - echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
+      
+      # ECR authentication
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      # Debug information
+      - echo "Current directory contents:"
+      - ls -la
+      - echo "Dockerfile contents:"
+      - cat Dockerfile
   build:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      # Add verbose output to docker build
+      - docker build --progress=plain -t $IMAGE_REPO_NAME:$IMAGE_TAG . 2>&1 || { echo "Docker build failed with status $?"; exit 1; }
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:latest
   post_build:
@@ -21,12 +32,15 @@ phases:
       - echo Pushing the Docker image...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - docker push $REPOSITORY_URI:latest
+      - echo Writing image definitions file...
+      - printf '{"ImageURI":"%s"}' $REPOSITORY_URI:$IMAGE_TAG > imageDefinitions.json
 
 artifacts:
   files:
     - appspec.yml
     - deployment-scripts/*
     - docker-compose.yml
+    - imageDefinitions.json
     # Add any other application files/directories needed for deployment
     # For example:
     # - ./path/to/your/app/files
