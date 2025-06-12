@@ -1,10 +1,11 @@
 #!/bin/bash
-yum update -y
-yum install -y docker aws-cli
+set -e
 
-# Start Docker service
-systemctl start docker
-systemctl enable docker
-usermod -a -G docker ec2-user
+echo "Cleaning up previous deployment artifacts..."
+# Ensure the target directory exists and is empty
+mkdir -p /opt/nodejs-app
+rm -rf /opt/nodejs-app/*
+
+echo "Previous artifacts cleaned."
 
 # ECR login moved to start_server.sh
