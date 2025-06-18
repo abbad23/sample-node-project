@@ -5,7 +5,7 @@ services:
   app:
     # Removed 'build' section
     # Reference the ECR image. The image URI will be passed to the script.
-    image: ${ECR_REPO_URL}:latest # This will be replaced by your script
+    image: 381491851900.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:latest
 
     ports:
       - "3005:3005" # Correct port mapping
